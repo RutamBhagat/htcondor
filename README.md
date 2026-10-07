@@ -42,3 +42,20 @@ htcondor/
 - `bun run dev`: Start all applications in development mode
 - `bun run build`: Build all applications
 - `bun run check-types`: Check TypeScript types across all apps
+- `bun run test`: Run local bootstrap regressions; live SSH tests are skipped
+- `bun run test:live`: Also run read-only checks against both provisioned HTCondor hosts
+
+## HTCondor bootstrap checks
+
+The first-install entry point is `scripts/bootstrap-node.sh`; copy it together with
+`scripts/lib/bootstrap-checks.sh`, preserving their relative paths. Run as root with
+`controller|worker CM_PRIVATE_IP OWN_PRIVATE_IP PEER_PRIVATE_IP`, and supply the
+pool password on stdin, never as an argument. It refuses an existing installation.
+No Python runtime is required by the bootstrap or its tests.
+
+Tests use Bun/TypeScript locally and Bash on the hosts. Live checks require OpenTofu
+outputs in `infra/`, SSH access, and noninteractive sudo. Defaults are
+`~/.ssh/oci-eu-frankfurt` and `.temp/known_hosts`; override with `HTCONDOR_SSH_KEY`
+and `HTCONDOR_KNOWN_HOSTS`. Strict host-key checking remains enabled. Checks read
+credential metadata only, not secret contents, and make no host configuration changes.
+They verify registration, not successful job execution.

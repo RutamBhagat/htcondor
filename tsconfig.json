@@ -1,3 +1,6 @@
 {
-  "extends": "@htcondor/config/tsconfig.base.json"
+  "extends": "@htcondor/config/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "bun"]
+  }
 }
