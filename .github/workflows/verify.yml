@@ -1,0 +1,61 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: 1.13.1
+          tofu_wrapper: false
+
+      - name: Check OpenTofu formatting
+        working-directory: infra
+        run: tofu fmt -check -recursive
+
+      - name: Initialize OpenTofu without backend
+        working-directory: infra
+        run: tofu init -backend=false -input=false
+
+      - name: Validate OpenTofu
+        working-directory: infra
+        run: tofu validate
+
+      - name: Install OpenVox parser and ShellCheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          release=/tmp/openvox9-release-ubuntu24.04.deb
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            https://apt.voxpupuli.org/openvox9-release-ubuntu24.04.deb \
+            -o "$release"
+          echo "4f8ffd4d5cc5d47b61e95d8d7ded2ba80d7eb902e478178ea988a5649e5777d3  $release" \
+            | sha256sum -c -
+          sudo systemctl mask puppet.service
+          sudo dpkg -i "$release"
+          sudo apt-get update --error-on=any
+          sudo apt-get install -y --no-install-recommends \
+            openvox-agent=9.0.0-1+ubuntu24.04 shellcheck
+          echo /opt/puppetlabs/bin >> "$GITHUB_PATH"
+
+      - name: Validate Puppet syntax
+        run: >-
+          puppet parser validate
+          puppet/manifests/*.pp
+          puppet/modules/htcondor/manifests/*.pp
+
+      - name: Check shell scripts
+        run: shellcheck scripts/*.sh

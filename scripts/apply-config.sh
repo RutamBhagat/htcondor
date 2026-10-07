@@ -42,16 +42,14 @@ worker_private=$(printf '%s' "$private_json" | jq -er '.worker')
 
 is_ipv4() {
   local value=$1
-  local old_ifs=$IFS
+  local -a parts
   local part
   case "$value" in
     ""|*[!0-9.]*|.*|*..*|*.) return 1 ;;
   esac
-  IFS=.
-  set -- $value
-  IFS=$old_ifs
-  [[ $# -eq 4 ]] || return 1
-  for part in "$@"; do
+  IFS=. read -r -a parts <<< "$value"
+  [[ ${#parts[@]} -eq 4 ]] || return 1
+  for part in "${parts[@]}"; do
     [[ "$part" =~ ^(0|[1-9][0-9]{0,2})$ ]] || return 1
     (( 10#$part <= 255 )) || return 1
   done
@@ -156,6 +154,7 @@ ensure_openvox() {
   local status
 
   set +e
+  # shellcheck disable=SC2016 # Expansion must happen on the remote host.
   "${SSH[@]}" "ubuntu@$host" \
     'if [[ ! -x /opt/puppetlabs/bin/puppet ]]; then exit 3; fi; [[ $(/opt/puppetlabs/bin/puppet --version) == 9.0.0 ]] || exit 4'
   status=$?

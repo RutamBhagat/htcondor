@@ -4,6 +4,7 @@
 # Usage: bootstrap-node.sh controller|worker CM_PRIVATE_IP OWN_PRIVATE_IP PEER_PRIVATE_IP
 set +x
 set -euo pipefail
+# shellcheck disable=SC1091 # Runtime-relative helper; bootstrap is copied with lib/.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/bootstrap-checks.sh"
 
 if [ "$#" -ne 4 ] || [[ "$1" != controller && "$1" != worker ]]; then

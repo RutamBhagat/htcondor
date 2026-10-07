@@ -8,6 +8,7 @@ if [[ $# -gt 1 || (${1:-} != '' && ${1:-} != --check) ]]; then
   exit 2
 fi
 [[ $(id -u) == 0 ]] || { echo 'Run as root.' >&2; exit 1; }
+# shellcheck disable=SC1091 # Host OS metadata is supplied by Ubuntu.
 . /etc/os-release
 [[ $ID == ubuntu && $VERSION_ID == 24.04 && $(dpkg --print-architecture) == amd64 ]] || {
   echo 'Only Ubuntu 24.04 amd64 is supported.' >&2; exit 1;
