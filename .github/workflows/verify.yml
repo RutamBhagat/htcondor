@@ -50,7 +50,7 @@ jobs:
         run: bun run test
 
       - name: Check TypeScript
-        run: bunx --no-install tsc --noEmit
+        run: bun run typecheck
 
       - name: Install OpenVox parser and ShellCheck
         shell: bash

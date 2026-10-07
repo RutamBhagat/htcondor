@@ -1,0 +1,45 @@
+Sanitized verification transcript
+=================================
+
+Captured on 2026-10-07 from the rebuilt two-node pool. We removed public and
+private addresses, SSH host keys, resource IDs, credentials, and command
+timings. We reduced long output to the relevant lines and normalized its
+layout. The displayed values match the source files.
+
+$ condor_version
+$CondorVersion: 25.0.14 2026-08-30 BuildID: 947353 PackageID: 25.0.14-1+ubu24 $
+$CondorPlatform: X86_64-Ubuntu_24.04 $
+
+$ condor_status
+Name           OpSys  Arch    State       Activity  Mem
+slot1@worker   LINUX  X86_64  Unclaimed   Idle      954
+
+               Total  Owner  Claimed  Unclaimed
+X86_64/LINUX       1      0        0          1
+
+$ scripts/apply-config.sh
+controller: OpenVox 9.0.0 already installed
+worker: OpenVox 9.0.0 already installed
+controller: already converged
+worker: already converged
+
+$ bash scripts/submit-hostname.sh 180
+Submitted 3.0 - 3.0
+All jobs done.
+Completed 3.0 successfully; results: jobs/results/hostname.3.0.{out,err,log}
+
+$ cat jobs/results/hostname.3.0.out
+worker
+x86_64
+Wed Oct  7 16:33:44 UTC 2026
+
+$ bash scripts/verify-hostname.sh 3.0 worker controller
+Verified 3.0 executed on worker, not controller
+
+Public TCP/9618 probe, 5-second limit (addresses redacted):
+controller: unreachable
+worker: unreachable
+
+$ HTCONDOR_LIVE_TEST=1 bun test scripts/tests
+5 pass
+0 fail

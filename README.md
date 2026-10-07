@@ -194,7 +194,7 @@ tofu -chdir=infra test
 
 bun install --frozen-lockfile
 bun run test
-bunx --no-install tsc --noEmit
+bun run typecheck
 
 /opt/puppetlabs/bin/puppet parser validate \
   puppet/manifests/*.pp puppet/modules/htcondor/manifests/*.pp

@@ -1,17 +1,8 @@
 # Dependencies
-node_modules
-.pnp
-.pnp.js
+node_modules/
 
 # Build outputs
-dist
-build
 *.tsbuildinfo
-
-# Generated files
-apps/web/src/routeTree.gen.ts
-local.db
-local.db-*
 
 # Environment variables
 .env*
@@ -58,33 +49,11 @@ evidence/generated/
 .DS_Store
 
 # Logs
-logs
-.evlog/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# Turbo
-.turbo
-.nx
-
-# Better-T-Stack
-.alchemy
-.vercel
 
 # Python measurement helpers
 __pycache__/
 *.py[cod]
 
 # Testing
-coverage
-.nyc_output
-
-# Misc
-*.tgz
-.cache
-tmp
-temp
+coverage/
