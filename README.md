@@ -12,7 +12,7 @@ Two-node HTCondor pool on Linux, provisioned with OpenTofu and managed with Open
 | OpenVox/Puppet ownership | Both role catalogs own the measured HTCondor state; an immediate second apply reported zero managed changes. See [configuration convergence](evidence/README.md#configuration-convergence). |
 | Reproducible lifecycle | Both E2 nodes were destroyed, recreated with OpenTofu, and restored from repository automation without undocumented host configuration repair. See [clean rebuild](evidence/README.md#clean-rebuild). |
 | Private scheduler path | TCP/9618 is allowed by OCI only from the VCN CIDR; live regressions reject public reachability while private HTCondor communication succeeds. See [network boundary](evidence/README.md#network-boundary). |
-| Credential-free CI validation | GitHub Actions runs OpenTofu format/init/validate, Puppet parser validation, and ShellCheck without OCI credentials. The workflow intentionally never plans or applies cloud resources. |
+| Credential-free CI validation | GitHub Actions runs OpenTofu format/init/validate/test, the full local repository test suite, TypeScript checking, Puppet parser validation, and ShellCheck without OCI credentials. The workflow intentionally never plans or applies cloud resources. |
 
 ## Architecture
 
@@ -49,7 +49,7 @@ HTCondor       -> scheduling and remote execution
 
 ## Reproduce
 
-Prerequisites: OpenTofu, OCI CLI/profile access, `jq`, SSH/`ssh-keyscan`, Python 3, an administrator CIDR, and an SSH key pair.
+Prerequisites: OpenTofu, Bun 1.4.2, OCI CLI/profile access, `jq`, SSH/`ssh-keyscan`, Python 3, an administrator CIDR, and an SSH key pair.
 
 Generate the pool credential locally without printing it:
 
@@ -132,12 +132,16 @@ Local, credential-free validation is the same mechanism used by CI:
 tofu -chdir=infra fmt -check -recursive
 tofu -chdir=infra init -backend=false -input=false
 tofu -chdir=infra validate
+tofu -chdir=infra test
+bun install --frozen-lockfile
+bun run test
+bunx --no-install tsc --noEmit
 /opt/puppetlabs/bin/puppet parser validate \
   puppet/manifests/*.pp puppet/modules/htcondor/manifests/*.pp
 shellcheck scripts/*.sh
 ```
 
-`bun run test` additionally exercises the repository's local bootstrap, orchestration, job, helper, and catalog contracts. `bun run test:live` enables read-only SSH regressions against an existing deployment.
+`bun run test:live` additionally enables read-only SSH regressions against an existing deployment; live checks are intentionally excluded from credential-free CI.
 
 ## CERN role → repository evidence
 
@@ -149,7 +153,7 @@ shellcheck scripts/*.sh
 | Terraform / OpenTofu | OCI lifecycle, exact E2 micro allocation, security-list policy, and native mocked infrastructure tests. |
 | Batch systems | Real HTCondor CentralManager + Submit → Execute flow across two Linux machines. |
 | Configuration changes | Measured working contract migrated into desired state and proven convergent after rebuild. |
-| Testing / validation | OpenTofu, Puppet parser, and ShellCheck gates in CI; local unit/contract/live regressions remain separate. |
+| Testing / validation | OpenTofu format/init/validate/test, unit/contract tests, TypeScript, Puppet parser validation, and ShellCheck run in CI; live SSH regressions remain opt-in. |
 | Git discipline | Small evidence-backed commits by mechanism, with secrets/state/generated live data excluded from version control. |
 
 ## Limits
