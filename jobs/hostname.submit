@@ -1,0 +1,20 @@
+# Run from the repository root: condor_submit jobs/hostname.submit
+universe = vanilla
+executable = jobs/hostname.sh
+
+# Reference Arch without pinning it, preventing condor_submit's default
+# submit-host architecture restriction. The payload needs Linux, not an ISA.
+requirements = (TARGET.OpSys == "LINUX") && (TARGET.Arch =!= UNDEFINED)
+request_cpus = 1
+request_memory = 32MB
+request_disk = 1MB
+
+should_transfer_files = YES
+transfer_executable = True
+when_to_transfer_output = ON_EXIT
+
+output = jobs/results/hostname.$(ClusterId).$(ProcId).out
+error = jobs/results/hostname.$(ClusterId).$(ProcId).err
+log = jobs/results/hostname.$(ClusterId).$(ProcId).log
+
+queue 1

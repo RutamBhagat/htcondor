@@ -1,0 +1,3 @@
+# Generated job output can contain live host details.
+*
+!.gitignore
