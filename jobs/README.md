@@ -25,5 +25,15 @@ On timeout or failure it exits nonzero and preserves the job and log for
 diagnosis; inspect `condor_q <id>` and remove with `condor_rm <id>` if unwanted.
 Run it once, then diagnose the existing job rather than blindly resubmitting.
 Successful termination does not by itself verify the worker hostname in stdout.
+From the same submit directory, verify the returned output with independently
+known hostnames (replace `1.0` with the submitted ID):
+
+```sh
+bash scripts/verify-hostname.sh 1.0 worker controller
+```
+
+This read-only check requires successful termination and an exact worker
+hostname on stdout's first line. It rejects the controller, other hosts, missing
+output, and unsuccessful jobs. It does not submit or remove a job.
 
 Syntax reference: [HTCondor 25.0 condor_submit manual](https://htcondor.readthedocs.io/en/25.0/man-pages/condor_submit.html).
