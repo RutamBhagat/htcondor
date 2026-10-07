@@ -36,6 +36,9 @@ id_ed25519_*
 **/.terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
 
 # Generated inventory and evidence may contain live addresses
 .temp/
