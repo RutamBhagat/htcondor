@@ -14,8 +14,33 @@ local.db
 local.db-*
 
 # Environment variables
-.env
-.env*.local
+.env*
+!.env.example
+
+# Local secrets and private keys
+secrets/
+*.secret
+*.secrets
+*.key
+*.pem
+id_rsa
+id_rsa_*
+id_dsa
+id_dsa_*
+id_ecdsa
+id_ecdsa_*
+id_ed25519
+id_ed25519_*
+
+# OpenTofu working data and state
+**/.terraform/
+*.tfstate
+*.tfstate.*
+
+# Generated inventory and evidence may contain live addresses
+.temp/
+inventory/generated/
+evidence/generated/
 
 # IDEs and editors
 .vscode/*
