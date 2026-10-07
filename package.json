@@ -10,7 +10,7 @@
     "dev": "bun run --filter '*' dev",
     "build": "bun run --filter '*' build",
     "check-types": "bun run --filter '*' check-types",
-    "test": "bun test scripts/tests",
+    "test": "bun test scripts/tests && python3 -m unittest discover -s scripts/tests -p 'test_*.py'",
     "test:live": "HTCONDOR_LIVE_TEST=1 bun test scripts/tests"
   },
   "dependencies": {

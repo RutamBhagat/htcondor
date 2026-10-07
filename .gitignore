@@ -75,6 +75,10 @@ lerna-debug.log*
 .alchemy
 .vercel
 
+# Python measurement helpers
+__pycache__/
+*.py[cod]
+
 # Testing
 coverage
 .nyc_output
