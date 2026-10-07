@@ -1,0 +1,3 @@
+<%- | String $own | -%>
+NETWORK_INTERFACE = <%= $own %>
+BIND_ALL_INTERFACES = FALSE

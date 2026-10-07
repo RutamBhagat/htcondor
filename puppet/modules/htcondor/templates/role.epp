@@ -1,0 +1,3 @@
+<%- | String $cm, String $metaknob | -%>
+CONDOR_HOST = <%= $cm %>
+use role:<%= $metaknob %>

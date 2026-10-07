@@ -61,6 +61,66 @@ still require measurement when the catalog exists**. No capacity increase was
 needed for the tested installation/smoke workload; larger-catalog capacity remains
 unproven. No swap, parallel jobs, or infrastructure resize was added.
 
+## HTCondor desired-state code (not applied yet)
+
+`manifests/controller.pp` and `manifests/worker.pp` use one local module,
+`modules/htcondor`. No Forge dependencies or server are required. The module owns
+the signed HTCondor repository/key, pinned Condor package, role/security/private
+binding files, opposite-role absence, credential permissions, runtime directory
+ownership, Condor service, and the peer-only live/persistent guest firewall rule.
+It preserves unrelated package configuration, queue data, SSH, and OCI rules.
+
+From a staged repository root on the target Ubuntu host, with private addresses
+from generated inventory (not literal placeholders):
+
+```sh
+sudo env FACTER_htcondor_cm="$cm" FACTER_htcondor_own="$own" \
+  FACTER_htcondor_peer="$peer" /opt/puppetlabs/bin/puppet apply \
+  --modulepath="$PWD/puppet/modules" --noop --detailed-exitcodes --summarize \
+  puppet/manifests/controller.pp  # worker.pp on the worker
+```
+
+The facts are non-secret topology only. A fresh install additionally requires
+`/run/htcondor-pool-password` as a root:root/0600 regular file containing the
+newline-terminated 64-character lowercase hex credential. Credential values are
+never catalog parameters, facts, file content, or command arguments. Existing
+nonempty key/token files are adopted, not regenerated; key rotation is not
+supported by this first migration. Protected-input transfer/cleanup and SSH
+orchestration are separate subsequent checklist items.
+
+Native package/file/service resources cover ordinary state. Guarded execs cover
+APT metadata refresh, preventing first-install daemon startup before credentials,
+official key/token generation, and preserving the OCI firewall while inserting
+one first-position peer rule. Service refreshes occur only on managed changes.
+
+Deliberate first-apply formatting deltas: omit inactive repository entries and
+role comments, and replace the pinned package's security version conditional
+with its effective `use security:recommended`. Noop plans on both hosts show
+only those three file normalizations plus the two new helper scripts; credentials,
+private binding, runtime permissions, packages, and firewall are already aligned.
+Both noop runs exited 0 despite five planned file changes: **noop exit 0 is not
+convergence proof**. Real application, measured catalog memory, second no-change
+application, and clean rebuild remain unverified.
+
+Validation from the repository root on an Ubuntu 24.04 host with the agent installed:
+
+```sh
+/opt/puppetlabs/bin/puppet parser validate puppet/manifests/*.pp puppet/modules/htcondor/manifests/*.pp
+python3 scripts/tests/check-puppet-catalogs.py
+bun run test
+```
+
+The catalog checker compiles both real role entrypoints, checks resources and
+rendered templates, and rejects missing/empty/noncanonical/public addresses and
+wrong topology. It preserves the measured bootstrap's accepted reserved-private
+ranges. Removing private-address classification in disposable staged code made
+the checker fail, proving the negative cases are not merely rejected by topology.
+Helper tests cover first-position/persistent firewall repair and repeat safety,
+OCI rule preservation, credential adoption, private atomic writes, secret-output
+suppression, symlinks, malformed input, and failure propagation. Actual HTCondor
+credential CLIs were additionally tested using disposable dummy keys/tokens;
+no real pool credential was read or changed.
+
 See [BASELINE.md](BASELINE.md) for the HTCondor contract that migration must preserve.
 Detailed method, raw CSV/JSON, and installation logs remain ignored under
 `.temp/evidence/slice-2/openvox/`; summary is `installation.md` there.
