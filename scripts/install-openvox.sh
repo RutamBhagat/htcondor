@@ -12,7 +12,7 @@ fi
 [[ $ID == ubuntu && $VERSION_ID == 24.04 && $(dpkg --print-architecture) == amd64 ]] || {
   echo 'Only Ubuntu 24.04 amd64 is supported.' >&2; exit 1;
 }
-for tool in curl sha256sum apt-get dpkg dpkg-query systemctl python3; do
+for tool in curl sha256sum apt-get dpkg dpkg-query systemctl python3 timeout cloud-init; do
   command -v "$tool" >/dev/null
 done
 # Refuse to replace existing configuration-management stacks.
@@ -30,6 +30,11 @@ done
 dpkg-query -W -f='${db:Status-Status}' lsb-release | grep -qx installed
 printf 'Supported host: %s, Ubuntu %s, amd64\n' "$(hostname)" "$VERSION_ID"
 [[ ${1:-} != --check ]] || exit 0
+
+# Fresh OCI images may still be finishing cloud-init package work when SSH first
+# becomes available. Wait for that bounded lifecycle signal instead of racing
+# dpkg's frontend lock or deleting lock files.
+timeout 180s cloud-init status --wait >/dev/null
 
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT

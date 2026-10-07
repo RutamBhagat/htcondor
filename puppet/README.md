@@ -45,6 +45,8 @@ Measured 2026-10-07, with HTCondor running, 954.0 MiB RAM, no swap. Samples ever
 | worker / install | 493.7 | 460.3 | 174.3 |
 | controller / smoke apply | 464.4 | 489.6 | 69.3 |
 | worker / smoke apply | 461.1 | 492.9 | 69.2 |
+| controller / full converged catalog | 460.6 | 493.4 | 76.9 |
+| worker / full converged catalog | 466.4 | 487.7 | 79.1 |
 
 All four commands exited 0. Neither host swapped or recorded an OOM event in the
 installation window. Fresh HTCondor regressions passed, the existing worker job
@@ -56,12 +58,11 @@ OpenVox. The requested interval was 250 ms; observed maximum gaps were 543 ms
 (controller install), 349 ms (worker install), 301 ms (controller apply), and
 343 ms (worker apply). Brief global peaks can be missed. Kernel child max RSS is the
 largest child-process high-water mark, not total simultaneous process-tree RSS.
-This smoke apply contains no managed host resources; **real module apply peaks
-still require measurement when the catalog exists**. No capacity increase was
-needed for the tested installation/smoke workload; larger-catalog capacity remains
-unproven. No swap, parallel jobs, or infrastructure resize was added.
+The final two rows are the complete 39-resource role catalogs on rebuilt hosts;
+both exited 0 with no changes and zero swap. No capacity increase was needed.
+No swap, parallel jobs, or infrastructure resize was added.
 
-## HTCondor desired-state code (not applied yet)
+## HTCondor desired-state code
 
 `manifests/controller.pp` and `manifests/worker.pp` use one local module,
 `modules/htcondor`. No Forge dependencies or server are required. The module owns
@@ -85,7 +86,20 @@ The facts are non-secret topology only. A fresh install additionally requires
 newline-terminated 64-character lowercase hex credential. Credential values are
 never catalog parameters, facts, file content, or command arguments. Existing
 nonempty key/token files are adopted, not regenerated; key rotation is not
-supported by this first migration. SSH orchestration is the next checklist item.
+supported by this first migration.
+
+From the repository root, the normal two-host entrypoint is:
+
+```sh
+scripts/apply-config.sh
+```
+
+It reads the two public/private address maps from OpenTofu, uses strict SSH host
+checking, stages only the required role/module/install/credential files, installs
+the pinned OpenVox agent when it is absent, and runs the correct role manifest.
+Fresh OpenVox installation waits for cloud-init completion before package changes
+to avoid racing the image's first-boot package work. Puppet detailed exit codes 0
+and 2 are successful; any other status is propagated.
 
 ### Protected credential input
 
@@ -105,9 +119,9 @@ ssh -i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes \
   < .temp/secrets/htcondor-pool-password
 ```
 
-For the eventual apply, replace the version command with the correct standalone
-apply command and its non-secret topology facts. Never use a literal password in
-shell commands or tracing, and never add the credential to the source archive.
+The orchestration entrypoint performs the actual standalone apply with the
+non-secret topology facts. Never use a literal password in shell commands or
+tracing, and never add the credential to the source archive.
 The local source must remain ignored and mode 0600. Input must be a file/closed
 pipe, not interactive stdin. The wrapper's strict single-line boundary deliberately
 rejects extra trailing data; the existing bootstrap/helper readline behavior is
@@ -131,9 +145,13 @@ role comments, and replace the pinned package's security version conditional
 with its effective `use security:recommended`. Noop plans on both hosts show
 only those three file normalizations plus the two new helper scripts; credentials,
 private binding, runtime permissions, packages, and firewall are already aligned.
-Both noop runs exited 0 despite five planned file changes: **noop exit 0 is not
-convergence proof**. Real application, measured catalog memory, second no-change
-application, and clean rebuild remain unverified.
+Those original noop runs were only migration previews. Real application on the
+working hosts subsequently changed the expected managed files and a second apply
+reported no changes across all 39 resources on both roles. A later OpenTofu
+destroy/recreate rebuilt both E2 nodes; repository automation restored the pool
+without manual host repair, a second apply was clean, and a fresh HTCondor job
+executed on the rebuilt worker. Raw/sanitized verification remains under ignored
+`.temp/evidence/slice-2/`.
 
 Validation from the repository root on an Ubuntu 24.04 host with the agent installed:
 

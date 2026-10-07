@@ -135,6 +135,7 @@ transfer_role() {
     puppet/modules/htcondor/files/htcondor.asc
     puppet/modules/htcondor/files/credentials.sh
     puppet/modules/htcondor/files/firewall.sh
+    scripts/install-openvox.sh
     scripts/with-pool-credential.py
   )
   local file
@@ -146,6 +147,33 @@ transfer_role() {
   done
   tar -C "$ROOT" -cf - "${files[@]}" |
     "${SSH[@]}" "ubuntu@$host" "umask 077; tar -xf - -C '$stage'"
+}
+
+ensure_openvox() {
+  local role=$1
+  local host=$2
+  local stage=$3
+  local status
+
+  set +e
+  "${SSH[@]}" "ubuntu@$host" \
+    'if [[ ! -x /opt/puppetlabs/bin/puppet ]]; then exit 3; fi; [[ $(/opt/puppetlabs/bin/puppet --version) == 9.0.0 ]] || exit 4'
+  status=$?
+  set -e
+
+  case "$status" in
+    0)
+      printf '%s: OpenVox 9.0.0 already installed\n' "$role"
+      ;;
+    3)
+      "${SSH[@]}" "ubuntu@$host" "cd '$stage' && sudo -n bash scripts/install-openvox.sh"
+      printf '%s: installed OpenVox 9.0.0\n' "$role"
+      ;;
+    *)
+      printf '%s: unexpected OpenVox state (%s)\n' "$role" "$status" >&2
+      return "$status"
+      ;;
+  esac
 }
 
 apply_role() {
@@ -182,6 +210,9 @@ controller_stage=$(create_stage "$controller_public")
 transfer_role controller "$controller_public" "$controller_stage"
 worker_stage=$(create_stage "$worker_public")
 transfer_role worker "$worker_public" "$worker_stage"
+
+ensure_openvox controller "$controller_public" "$controller_stage"
+ensure_openvox worker "$worker_public" "$worker_stage"
 
 apply_role controller "$controller_public" "$controller_stage" "$controller_private" "$worker_private"
 apply_role worker "$worker_public" "$worker_stage" "$worker_private" "$controller_private"

@@ -35,3 +35,13 @@ test("non-root invocation fails before reading OS or changing packages", () => {
     rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+test("real installation waits for cloud-init before touching dpkg", () => {
+  const text = require("node:fs").readFileSync(script, "utf8");
+  const checkExit = text.indexOf("[[ ${1:-} != --check ]] || exit 0");
+  const wait = text.indexOf("timeout 180s cloud-init status --wait");
+  const dpkgInstall = text.indexOf('dpkg -i "$scratch/release.deb"');
+  expect(checkExit).toBeGreaterThanOrEqual(0);
+  expect(wait).toBeGreaterThan(checkExit);
+  expect(dpkgInstall).toBeGreaterThan(wait);
+});

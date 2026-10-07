@@ -65,6 +65,21 @@ case "$command" in
       printf 'ARCHIVE %s %s\\n' "$dest" "$item" >> "$log"
     done
     ;;
+  *"/opt/puppetlabs/bin/puppet --version"*)
+    case "$dest" in
+      *198.51.100.10) exit "\${FAKE_CONTROLLER_OPENVOX_STATUS:-0}" ;;
+      *203.0.113.20) exit "\${FAKE_WORKER_OPENVOX_STATUS:-0}" ;;
+      *) exit 65 ;;
+    esac
+    ;;
+  *"sudo -n bash scripts/install-openvox.sh"*)
+    printf 'INSTALL %s\\n' "$dest" >> "$log"
+    case "$dest" in
+      *198.51.100.10) exit "\${FAKE_CONTROLLER_INSTALL_STATUS:-0}" ;;
+      *203.0.113.20) exit "\${FAKE_WORKER_INSTALL_STATUS:-0}" ;;
+      *) exit 65 ;;
+    esac
+    ;;
   *"with-pool-credential.py -- "*)
     bytes=$(cat | wc -c | tr -d ' ')
     printf 'CREDENTIAL_BYTES %s %s\\n' "$dest" "$bytes" >> "$log"
@@ -121,6 +136,7 @@ describe("apply-config orchestration", () => {
       "puppet/modules/htcondor/files/htcondor.asc",
       "puppet/modules/htcondor/files/credentials.sh",
       "puppet/modules/htcondor/files/firewall.sh",
+      "scripts/install-openvox.sh",
       "scripts/with-pool-credential.py",
     ];
     expect(controllerArchive.map((line) => line.replace(/^ARCHIVE ubuntu@198\.51\.100\.10 /, "")).sort())
@@ -133,8 +149,26 @@ describe("apply-config orchestration", () => {
     expect(log).toContain("--detailed-exitcodes --summarize");
     expect(log).toContain("CREDENTIAL_BYTES ubuntu@198.51.100.10 65");
     expect(log).toContain("CREDENTIAL_BYTES ubuntu@203.0.113.20 65");
+    expect(log).not.toContain("INSTALL ");
     expect(log).not.toContain("BASELINE.md");
     expect(log).not.toContain("README.md");
+  });
+
+  test("installs the pinned OpenVox agent on a fresh host before applying Puppet", () => {
+    const { result, log } = run({ FAKE_CONTROLLER_OPENVOX_STATUS: "3", FAKE_WORKER_OPENVOX_STATUS: "3" });
+    expect(result.status).toBe(0);
+    expect(log).toContain("INSTALL ubuntu@198.51.100.10");
+    expect(log).toContain("INSTALL ubuntu@203.0.113.20");
+    expect(log.indexOf("INSTALL ubuntu@198.51.100.10")).toBeLessThan(log.indexOf("CREDENTIAL_BYTES ubuntu@198.51.100.10"));
+    expect(log.indexOf("INSTALL ubuntu@203.0.113.20")).toBeLessThan(log.indexOf("CREDENTIAL_BYTES ubuntu@203.0.113.20"));
+  });
+
+  test("rejects an unexpected OpenVox state instead of installing over it", () => {
+    const { result, log } = run({ FAKE_CONTROLLER_OPENVOX_STATUS: "4" });
+    expect(result.status).toBe(4);
+    expect(result.stderr).toContain("controller: unexpected OpenVox state (4)");
+    expect(log).not.toContain("INSTALL ubuntu@198.51.100.10");
+    expect(log).toContain("CLEANUP ubuntu@198.51.100.10");
   });
 
   test("propagates a Puppet failure and still removes both remote staging directories", () => {
