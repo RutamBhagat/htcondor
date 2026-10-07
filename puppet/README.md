@@ -85,8 +85,41 @@ The facts are non-secret topology only. A fresh install additionally requires
 newline-terminated 64-character lowercase hex credential. Credential values are
 never catalog parameters, facts, file content, or command arguments. Existing
 nonempty key/token files are adopted, not regenerated; key rotation is not
-supported by this first migration. Protected-input transfer/cleanup and SSH
-orchestration are separate subsequent checklist items.
+supported by this first migration. SSH orchestration is the next checklist item.
+
+### Protected credential input
+
+`scripts/with-pool-credential.py` runs one trusted command as root, reading exactly
+one credential line from stdin. It publishes `/run/htcondor-pool-password` only
+after writing a complete 0600 file in a private 0700 directory. An existing file
+or symlink is never overwritten. The child gets no credential stdin, argv, or
+new environment variable; it reads the protected path only when necessary.
+
+With the public script already staged on a host, a harmless transfer smoke check
+from the local repository root is:
+
+```sh
+ssh -i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile="$known_hosts" "ubuntu@$host" \
+  "cd '$staged_repo' && sudo -n python3 scripts/with-pool-credential.py -- /opt/puppetlabs/bin/puppet --version" \
+  < .temp/secrets/htcondor-pool-password
+```
+
+For the eventual apply, replace the version command with the correct standalone
+apply command and its non-secret topology facts. Never use a literal password in
+shell commands or tracing, and never add the credential to the source archive.
+The local source must remain ignored and mode 0600. Input must be a file/closed
+pipe, not interactive stdin. The wrapper's strict single-line boundary deliberately
+rejects extra trailing data; the existing bootstrap/helper readline behavior is
+unchanged.
+
+The wrapper preserves command exit codes (including Puppet's change code 2),
+terminates its private child process group on interruption/completion, and removes
+only its own input inode and scratch directory. Cleanup failures return nonzero.
+INT/TERM/HUP cleanup is tested; SIGKILL, a kernel crash, or filesystem failure can
+leave a root-only file. Inspect and remove stale input explicitly before retrying;
+the wrapper will not silently replace it. This is not a sandbox or log redactor:
+run only trusted catalog/helpers that never print credential contents.
 
 Native package/file/service resources cover ordinary state. Guarded execs cover
 APT metadata refresh, preventing first-install daemon startup before credentials,
